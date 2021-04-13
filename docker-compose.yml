@@ -1,0 +1,151 @@
+version: "3"
+services:
+  php:
+    env_file : .env
+    build: 
+      context: .docker/php/${PHP_VERSION}
+      dockerfile: Dockerfile
+      args:
+        - TARGET_PHP_VERSION=${PHP_VERSION}
+    depends_on:
+      - node    
+    container_name: "${SERVER_ID}apache-srv"
+    image: server-apache
+    volumes:
+      
+        # SSL-Mount-Point
+
+      - /etc/mnt/SSL/demo2demo1_com/STAR_demo1_com.crt:/etc/ssl/private/STAR_demo1_com.crt
+      - /etc/mnt/SSL/demo2demo1_com/demo2.ca-bundle:/etc/ssl/private/demo2.ca-bundle
+      - /etc/mnt/SSL/demo2demo1_com/demo2.demo1.com.key:/etc/ssl/private/demo2.demo1.com.key
+       
+        # CURL cacert.pem  Mount-Point
+      - .docker/php/cacert.pem:/etc/ssl/private/cacert.pem 
+
+        #  Apache-Mount-Point 
+      - .docker/apache/000-default.conf:/etc/apache2/sites-enabled/000-default.conf
+      - .docker/apache/mods-enabled/ssl.conf:/etc/apache2/mods-enabled/ssl.conf  
+      - .docker/apache/apache2.conf:/etc/apache2/apache2.conf
+        
+        # PHP-INI-Mount-Point
+      #- .docker/php/${PHP_VERSION}/php.ini:/usr/local/etc/php/php.ini
+       
+      - ${DEMO_APP_ROOT}:/var/www/html/demo1
+      - ${DEMO2_APP_ROOT}:/var/www/html/demo2
+      
+        # Time Zone Mount Point
+
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - ${APP_HTTP_PORT}:80
+      - ${APP_HTTPS_PORT}:443
+    restart: always
+    networks:
+      - hd-network
+
+  #mysql:
+    #image: mysql:${MYSQL_VERSION}
+    #container_name: "${SERVER_ID}mysql-srv"
+    #volumes:
+    #  - .docker/mysql:/var/lib/mysql
+    #ports:
+    #  - ${APP_MYSQL_PORT}:3306
+    #environment:
+     #MYSQL_USER: ${MYSQL_USER}
+     #MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+     #MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    #restart: always
+    #networks:
+      #- mynetwork
+  node:
+    build: 
+      context: .docker/node/${NODE_VERSION}
+      dockerfile: Dockerfile
+      args:
+        - TARGET_NODE_VERSION=${NODE_VERSION}
+        - TARGET_NODE_APP_ROOT=${NODE_APP_ROOT}
+    depends_on:
+      - mongo    
+    container_name: ${SERVER_ID}node
+    image: server-node
+    restart: always
+    volumes:
+      - ${NODE_APP_ROOT}:/usr/src/app
+      - /etc/mnt/SSL/demo2demo1_com/demo2.ca-bundle:/usr/src/ssl/private/demo2.ca-bundle  
+      - /etc/mnt/SSL/demo2demo1_com/STAR_demo1_com.crt:/usr/src/ssl/private/STAR_demo1_com.crt
+      - /etc/mnt/SSL/demo2demo1_com/demo2.demo1.com.key:/usr/src/ssl/private/demo2.demo1.com.key
+    ports:
+      - ${NODE_APP_PORT}:${NODE_APP_PORT}
+    networks:
+      - hd-network    
+  mongo:
+    env_file : .env
+    container_name: ${SERVER_ID}mongo
+    #image: mongo
+    image: mongo:3.6
+    command: mongod --port ${MONGO_DB_PORT}
+    restart: "always"
+    environment:
+     # - MONGO_INITDB_ROOT_USERNAME=${MONGO_ADMIN_USERNAME}
+     # - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ADMIN_USERNAME}
+      
+      
+     # - MONGO_ADMIN_USERNAME=${MONGO_ADMIN_USERNAME}
+     # - MONGO_ADMIN_PASSWORD=${MONGO_ADMIN_PASSWORD}
+      
+     # - MONGO_DATABASE=${MONGO_DATABASE}
+     # - MONGO_DBUSER=${MONGO_DBUSER}
+     # - MONGO_DBUSER_PASSWORD=${MONGO_DBUSER_PASSWORD}
+      
+     # - MONGO_DEMO2_DATABASE=${MONGO_DEMO2_DATABASE}
+     # - MONGO_DEMO2_DBUSER=${MONGO_DEMO2_DBUSER}
+     # - MONGO_DEMO2_DBUSER_PASSWORD=${MONGO_DEMO2_DBUSER_PASSWORD}
+      
+      
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      
+      - MONGO_ADMIN_USERNAME=${MONGO_ADMIN_USERNAME}
+      - MONGO_ADMIN_PASSWORD=${MONGO_ADMIN_PASSWORD}
+      
+      - MONGO_DATABASE=${MONGO_DATABASE}
+      - MONGO_DBUSER=${MONGO_DBUSER}
+      - MONGO_DBUSER_PASSWORD=${MONGO_DBUSER_PASSWORD}
+      
+      - MONGO_DATABASE2=${MONGO_DATABASE2}
+      - MONGO_DBUSER2=${MONGO_DBUSER2}
+      - MONGO_DBUSER_PASSWORD2=${MONGO_DBUSER_PASSWORD2}
+      
+      
+    volumes:
+      - ${MONGO_DB_PATH}:/data/db
+      - ${MONGO_DB_CONFIG}:/docker-entrypoint-initdb.d/
+      - ${MONGO_DB_HOME}:/home/mongodb
+       
+    ports:
+      - ${MONGO_DB_PORT}:${MONGO_DB_PORT}
+    networks:
+      - hd-network  
+  phpmyadmin:
+    image: phpmyadmin:${PHPMYADMIN_VERSION}
+    container_name: ${SERVER_ID}phpmyadmin-srv
+    ports:
+      - ${PHPMYADMIN_PORT}:80
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=${MYSQL_HOST}
+      - PMA_USER=${MYSQL_USER}
+      - PMA_PMADB=${MYSQL_DB}
+      - PMA_PASSWORD=${MYSQL_PASSWORD}
+    restart: always
+    networks:
+      - hd-network
+  mail:
+      image: mailhog/mailhog:${MAILHOG_VERSION}
+      ports:
+      - ${MAILHOG_PORT}:8025
+
+networks:
+       hd-network:
+

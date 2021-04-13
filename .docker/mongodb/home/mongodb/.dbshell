@@ -1,0 +1,14 @@
+echo "Using demo1 database"
+use demo1
+echo "Using demo1_demo2 database"
+use demo1_demo2
+echo "Using user_auth_database2 database"
+use user_auth_database2
+echo "Using demo1_demo2 database"
+use demo1_demo2
+echo "Using user_auth_database2 database"
+use user_auth_database2
+echo "Using demo1 database"
+use demo1
+echo "Using demo1_demo2 database"
+use demo1_demo2
